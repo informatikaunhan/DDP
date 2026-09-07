@@ -1,8 +1,9 @@
 name: Import DDP learning materials
 on:
   push:
+    branches: [main]
     paths:
-      - 'import-data/DDP101_Belajar_Mandiri.zip'
+      - 'import-data/chunks/part11.b64'
   workflow_dispatch:
 permissions:
   contents: write
@@ -11,22 +12,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Extract and publish learning materials
+      - name: Verify and extract learning materials
         run: |
           python3 - <<'PY'
-          from pathlib import Path
-          import zipfile
-          archive = Path('import-data/DDP101_Belajar_Mandiri.zip')
-          with zipfile.ZipFile(archive) as z:
-              for item in z.infolist():
-                  path = Path(item.filename)
-                  if path.is_absolute() or '..' in path.parts:
+          from pathlib import Path, PurePosixPath
+          import base64, hashlib, io, tarfile
+          parts = [Path(f'import-data/chunks/part{i:02d}.b64') for i in range(1, 12)]
+          data = base64.b64decode(''.join(p.read_text(encoding='ascii').strip() for p in parts), validate=True)
+          expected = '50121c0590dcaa5f1abf0c5d8e8c37a3d0a2d16db28a2b028ff09e60e23a4927'
+          if hashlib.sha256(data).hexdigest() != expected:
+              raise ValueError('Archive checksum mismatch')
+          with tarfile.open(fileobj=io.BytesIO(data), mode='r:xz') as archive:
+              files = [m for m in archive if m.isfile()]
+              if len(files) != 184:
+                  raise ValueError('Unexpected file count')
+              for item in files:
+                  path = PurePosixPath(item.name)
+                  if path.is_absolute() or '..' in path.parts or path.parts[0] not in {'assets', 'pertemuan-01', 'pertemuan-02', 'pertemuan-03', 'pertemuan-04', 'pertemuan-05', 'pertemuan-06', 'pertemuan-07', 'pertemuan-08', 'pertemuan-09', 'pertemuan-10', 'pertemuan-11', 'pertemuan-12', 'pertemuan-13', 'pertemuan-14', 'pertemuan-15', 'README.md', 'LICENSE_NOTICE.md', '.gitignore'}:
                       raise ValueError('Unsafe archive path')
-                  if not item.is_dir():
-                      dest = Path('.') / path
-                      dest.parent.mkdir(parents=True, exist_ok=True)
-                      dest.write_bytes(z.read(item))
+                  dest = Path(item.name)
+                  dest.parent.mkdir(parents=True, exist_ok=True)
+                  dest.write_bytes(archive.extractfile(item).read())
           PY
+      - name: Commit published materials
+        run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add README.md LICENSE_NOTICE.md pertemuan-* assets/ .gitignore
