@@ -1,3 +1,4 @@
+# Build outputs
 build/
 cmake-build-*/
 *.exe
@@ -9,14 +10,17 @@ cmake-build-*/
 *.dll
 *.pdb
 *.ilk
+*.class
 __pycache__/
 *.pyc
+# IDE and temporary files
 .vs/
 .idea/
 *.user
 *.suo
 *.tmp
 *.bak
+# Local generated data
 *.log
 .DS_Store
 Thumbs.db

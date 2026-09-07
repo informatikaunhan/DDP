@@ -1,0 +1,10 @@
+# Compile with debug symbols first:
+# g++ -std=c++17 -g examples/09_debug_rekursi.cpp -o debug_rekursi
+
+break faktorialBug
+run
+display n
+step
+backtrace
+finish
+quit
